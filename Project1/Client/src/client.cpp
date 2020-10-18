@@ -4,7 +4,10 @@
 #include <arpa/inet.h>
 #include <unistd.h>
 #include <string.h>
+#include <iostream>
 #define PORT 8080
+using std::cout;
+using std::endl;
 
 int main(int argc, char const *argv[])
 {
@@ -14,7 +17,7 @@ int main(int argc, char const *argv[])
 	char buffer[1024] = {0};
 	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
 	{
-		printf("\n Socket creation error \n");
+		cout << "Socket creation error" << endl;
 		return -1;
 	}
 
@@ -24,18 +27,18 @@ int main(int argc, char const *argv[])
 	// Convert IPv4 and IPv6 addresses from text to binary form
 	if (inet_pton(AF_INET, "127.0.0.1", &serv_addr.sin_addr) <= 0)
 	{
-		printf("\nInvalid address/ Address not supported \n");
+		cout << "Invalid address/ Address not supported" << endl;
 		return -1;
 	}
 
 	if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
 	{
-		printf("\nConnection Failed \n");
+		cout << "Connection failed" << endl;
 		return -1;
 	}
 	send(sock, hello, strlen(hello), 0);
-	printf("Hello message sent\n");
+	cout << "Hello message sent" << endl;
 	valread = read(sock, buffer, 1024);
-	printf("%s\n", buffer);
+	cout << buffer << endl;
 	return 0;
 }
