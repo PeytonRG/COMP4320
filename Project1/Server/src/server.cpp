@@ -1,4 +1,5 @@
 // Server side C/C++ program to demonstrate Socket programming
+// https://www.geeksforgeeks.org/udp-server-client-implementation-c/?ref=lbp
 #include <unistd.h>
 #include <stdio.h>
 #include <sys/socket.h>
@@ -11,7 +12,7 @@
 #define PACKET_SIZE 128
 using namespace std;
 
-int server_fd, new_socket, valread;
+int server_fd;
 struct sockaddr_in clientAddress, serverAddress;
 struct sockaddr_storage storage;
 int opt = 1;
@@ -30,47 +31,43 @@ int main(int argc, char const *argv[])
 
 	receiveMessage();
 
-	// valread = read(new_socket, buffer, 1024);
-	// cout << buffer << endl;
-	send(new_socket, hello, strlen(hello), 0);
-	cout << "Hello message sent" << endl;
+	int len, n;
+
+	len = sizeof(clientAddress); //len is value/resuslt
+
+	n = recvfrom(server_fd, (char *)buffer, PACKET_SIZE,
+				 MSG_WAITALL, (struct sockaddr *)&clientAddress,
+				 &addrSize);
+	buffer[n] = '\0';
+	printf("Client : %s\n", buffer);
+	sendto(server_fd, (const char *)hello, strlen(hello),
+		   MSG_SEND, (const struct sockaddr *)&clientAddress,
+		   addrSize);
+	printf("Hello message sent.\n");
 	return 0;
 }
 
 int connectToClient()
 {
 	// Creating socket file descriptor
-	if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) == 0)
+	if ((server_fd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
 	{
-		perror("socket failed");
+		perror("socket creation failed");
 		exit(EXIT_FAILURE);
 	}
 
-	// Forcefully attaching socket to the port 8080
-	// if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)))
-	// {
-	// 	perror("setsockopt");
-	// 	exit(EXIT_FAILURE);
-	// }
+	memset(&serverAddress, 0, sizeof(serverAddress));
+	memset(&clientAddress, 0, sizeof(clientAddress));
+
 	serverAddress.sin_family = AF_INET;
-	serverAddress.sin_addr.s_addr = htonl(INADDR_ANY);
+	serverAddress.sin_addr.s_addr = INADDR_ANY;
 	serverAddress.sin_port = htons(PORT);
 
-	// Forcefully attaching socket to the port 8080
-	if (::bind(server_fd, (struct sockaddr *)&serverAddress, sizeof(serverAddress)) == -1)
+	// Bind the socket with the server address
+	if (::bind(server_fd, (const struct sockaddr *)&serverAddress,
+			   sizeof(serverAddress)) == -1)
 	{
 		perror("bind failed");
-		exit(EXIT_FAILURE);
-	}
-	if (listen(server_fd, 3) < 0)
-	{
-		perror("listen");
-		exit(EXIT_FAILURE);
-	}
-	if ((new_socket = accept(server_fd, (struct sockaddr *)&serverAddress,
-							 (socklen_t *)&addrSize)) < 0)
-	{
-		perror("accept");
 		exit(EXIT_FAILURE);
 	}
 
