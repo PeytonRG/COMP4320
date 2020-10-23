@@ -206,6 +206,12 @@ std::vector<char*> createPackets() {
 	return packets;
 }
 
+std::vector<char*> receivePackets() {
+	// int valread = read(sock, buffer, 1024);
+	// cout << buffer << endl;
+	return {};
+}
+
 // read test file into buffer
 bool readFile(std::string fileName) {
 	std::fstream file(fileName);
@@ -228,10 +234,8 @@ int main(int argc, char const *argv[])
 	getGremlinProbabilities();
 	std::vector<char*> packets = createPackets();
 	sendPackets(packets);
-
-	// recieve packets, check for errors
-	// int valread = read(sock, buffer, 1024);
-	// cout << buffer << endl;
+	packets = receivePackets();
+	errorChecking(packets);
 	
 	return 0;
 }
