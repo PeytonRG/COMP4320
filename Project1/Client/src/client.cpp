@@ -16,14 +16,13 @@
 using std::cout;
 using std::endl;
 
-int sock;
-int valread;
 std::stringstream buffer;
 int damageProb;
 int lossProb;
 int sockfd;
 struct sockaddr_in servaddr;
 char *hello = "Hello from client";
+char packetBuffer[1024] = {0};
 
 // connect to the client
 int connect(const char *ipadr)
@@ -42,38 +41,15 @@ int connect(const char *ipadr)
 	servaddr.sin_port = htons(PORT);
 	servaddr.sin_addr.s_addr = INADDR_ANY;
 
-	// // Convert IPv4 and IPv6 addresses from text to binary form
-	// if (inet_pton(AF_INET, ipadr, &serv_addr.sin_addr) <= 0)
-	// {
-	// 	cout << "Invalid address/ Address not supported" << endl;
-	// 	return -1;
-	// }
+	// n = recvfrom(sockfd, (char *)packetBuffer, 1024,
+	// 			 MSG_WAITALL, (struct sockaddr *)&servaddr,
+	// 			 &len);
+	// packetBuffer[n] = '\0';
+	// printf("Server : %s\n", packetBuffer);
 
-	// if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
-	// {
-	// 	cout << "Connection failed" << endl;
-	// 	return -1;
-	// }
+	// close(sockfd);
 
-	socklen_t len;
-	int n;
-
-	sendto(sockfd, (const char *)hello, strlen(hello),
-		   0, (const struct sockaddr *)&servaddr,
-		   sizeof(servaddr));
-	printf("Hello message sent.\n");
-
-	char buffer[1024] = {0};
-
-	n = recvfrom(sockfd, (char *)buffer, 1024,
-				 MSG_WAITALL, (struct sockaddr *)&servaddr,
-				 &len);
-	buffer[n] = '\0';
-	printf("Server : %s\n", buffer);
-
-	close(sockfd);
-
-	return sock;
+	return 0;
 }
 
 int calculateChecksum(char packet[])
@@ -181,7 +157,17 @@ void sendPackets(std::vector<char *> packets)
 	for (int i = 0; i < packets.size(); i++)
 	{
 		// send(sock, packets[i], strlen(packets[i]), 0);
+		socklen_t len;
+		int n;
+
+		sendto(sockfd, &packets, 128, 0, (const struct sockaddr *)&servaddr, sizeof(servaddr));
 		cout << "Packet #" << std::to_string(i + 1) << " sent" << endl;
+
+		n = recvfrom(sockfd, (char *)&packets, 128,
+					 MSG_WAITALL, (struct sockaddr *)&servaddr,
+					 &len);
+		packetBuffer[n] = '\0';
+		printf("Server : %s\n", packetBuffer);
 	}
 	cout << "All packets sent" << endl;
 }
@@ -278,8 +264,8 @@ bool readFile(std::string fileName)
 int main(int argc, char const *argv[])
 {
 	srand(time(0));
-	sock = connect(IPADDR);
-	if (sock < 0)
+	sockfd = connect(IPADDR);
+	if (sockfd < 0)
 	{
 		return -1;
 	}

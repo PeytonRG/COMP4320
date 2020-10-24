@@ -75,7 +75,7 @@ int receiveMessage()
 
 	len = sizeof(cliaddr); //len is value/resuslt
 
-	n = recvfrom(sockfd, (char *)buffer, 1024,
+	n = recvfrom(sockfd, (char *)buffer, PACKET_SIZE,
 				 MSG_WAITALL, (struct sockaddr *)&cliaddr,
 				 &len);
 	buffer[n] = '\0';
