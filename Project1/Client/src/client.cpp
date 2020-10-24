@@ -21,54 +21,57 @@ int valread;
 std::stringstream buffer;
 int damageProb;
 int lossProb;
+int sockfd;
+struct sockaddr_in servaddr;
+char *hello = "Hello from client";
 
 // connect to the client
 int connect(const char *ipadr)
 {
-	int sock = 0;
-	struct sockaddr_in serv_addr;
-	if ((sock = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
+	// Creating socket file descriptor
+	if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
 	{
-		cout << "Socket creation error" << endl;
-		return -1;
+		perror("socket creation failed");
+		exit(EXIT_FAILURE);
 	}
 
-	memset(&serv_addr, 0, sizeof(serv_addr));
+	memset(&servaddr, 0, sizeof(servaddr));
 
-	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_port = htons(PORT);
-	serv_addr.sin_addr.s_addr = INADDR_ANY;
+	// Filling server information
+	servaddr.sin_family = AF_INET;
+	servaddr.sin_port = htons(PORT);
+	servaddr.sin_addr.s_addr = INADDR_ANY;
 
-	// Convert IPv4 and IPv6 addresses from text to binary form
-	if (inet_pton(AF_INET, ipadr, &serv_addr.sin_addr) <= 0)
-	{
-		cout << "Invalid address/ Address not supported" << endl;
-		return -1;
-	}
+	// // Convert IPv4 and IPv6 addresses from text to binary form
+	// if (inet_pton(AF_INET, ipadr, &serv_addr.sin_addr) <= 0)
+	// {
+	// 	cout << "Invalid address/ Address not supported" << endl;
+	// 	return -1;
+	// }
 
-	if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
-	{
-		cout << "Connection failed" << endl;
-		return -1;
-	}
+	// if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
+	// {
+	// 	cout << "Connection failed" << endl;
+	// 	return -1;
+	// }
 
-	int n, len;
-	char buffer[128];
-	char *hello = "Hello from client";
-	socklen_t addrSize = sizeof(serv_addr);
+	socklen_t len;
+	int n;
 
-	sendto(sock, (const char *)hello, strlen(hello),
-		   MSG_SEND, (const struct sockaddr *)&serv_addr,
-		   sizeof(serv_addr));
+	sendto(sockfd, (const char *)hello, strlen(hello),
+		   0, (const struct sockaddr *)&servaddr,
+		   sizeof(servaddr));
 	printf("Hello message sent.\n");
 
-	n = recvfrom(sock, (char *)buffer, 128,
-				 MSG_WAITALL, (struct sockaddr *)&serv_addr,
-				 &addrSize);
+	char buffer[1024] = {0};
+
+	n = recvfrom(sockfd, (char *)buffer, 1024,
+				 MSG_WAITALL, (struct sockaddr *)&servaddr,
+				 &len);
 	buffer[n] = '\0';
 	printf("Server : %s\n", buffer);
 
-	close(sock);
+	close(sockfd);
 
 	return sock;
 }
