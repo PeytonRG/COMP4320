@@ -47,25 +47,12 @@ int connectToClient()
 
 int calculateChecksum(char packet[])
 {
-	// Variable declarations
-	int sum = 0;
-	int i;
-
-	// Calculates the sum
-	for (i = 1; i < 10; i++)
+	int checksum = 0;
+	for (int i = 0; i < 128; i++)
 	{
-		sum += packet[i];
+		checksum += packet[i];
 	}
-
-	// Returns true (1) if checksum contains all 3's; otherwise, returns false (0)
-	if (sum % 3 == 0)
-	{
-		return 1;
-	}
-	else
-	{
-		return 0;
-	}
+	return checksum;
 }
 
 int receiveMessage()

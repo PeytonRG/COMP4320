@@ -160,7 +160,8 @@ void sendPackets(std::vector<char *> packets)
 		socklen_t len;
 		int n;
 
-		sendto(sockfd, &packets, 128, 0, (const struct sockaddr *)&servaddr, sizeof(servaddr));
+		// the second argument is what needs to be a char[]
+		sendto(sockfd, &packets[i], 128, 0, (const struct sockaddr *)&servaddr, sizeof(servaddr));
 		cout << "Packet #" << std::to_string(i + 1) << " sent" << endl;
 
 		n = recvfrom(sockfd, (char *)&packets, 128,
