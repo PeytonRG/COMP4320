@@ -57,20 +57,26 @@ int calculateChecksum(char packet[])
 
 int receiveMessage()
 {
-	socklen_t len;
-	int n;
+	int packetNum = 1;
+	while (true)
+	{
+		socklen_t socketLength;
+		int msgLength;
 
-	len = sizeof(cliaddr); //len is value/resuslt
+		socketLength = sizeof(cliaddr); //len is value/resuslt
 
-	n = recvfrom(sockfd, (char *)buffer, PACKET_SIZE,
-				 MSG_WAITALL, (struct sockaddr *)&cliaddr,
-				 &len);
-	buffer[n] = '\0';
-	printf("Client : %s\n", buffer);
-	sendto(sockfd, (const char *)hello, strlen(hello),
-		   0, (const struct sockaddr *)&cliaddr,
-		   len);
-	printf("Hello message sent.\n");
+		msgLength = recvfrom(sockfd, (char *)buffer, PACKET_SIZE,
+							 MSG_WAITALL, (struct sockaddr *)&cliaddr,
+							 &socketLength);
+		buffer[msgLength] = '\0';
+		cout << "Packet #" << packetNum << " received" << endl;
+		printf("Client : %s\n", buffer);
+		packetNum++;
+		sendto(sockfd, (const char *)hello, strlen(hello),
+			   0, (const struct sockaddr *)&cliaddr,
+			   socketLength);
+		printf("Hello message sent.\n");
+	}
 
 	return 0;
 	// // Variable declarations

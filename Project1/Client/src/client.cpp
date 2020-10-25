@@ -21,7 +21,6 @@ int damageProb;
 int lossProb;
 int sockfd;
 struct sockaddr_in servaddr;
-char *hello = "Hello from client";
 char packetBuffer[128] = {0};
 
 // connect to the client
@@ -158,28 +157,6 @@ void errorChecking(char packet[])
 void sendPacket(char packet[])
 {
 	// server is cutting it short atm
-	// send(sock, packets[i], strlen(packets[i]), 0);
-
-	if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
-	{
-		perror("socket creation failed");
-		exit(EXIT_FAILURE);
-	}
-
-	int n;
-	socklen_t len;
-
-	sendto(sockfd, (const char *)hello, strlen(hello),
-		   0, (const struct sockaddr *)&servaddr,
-		   sizeof(servaddr));
-
-	n = recvfrom(sockfd, (char *)packetBuffer, 128,
-				 MSG_WAITALL, (struct sockaddr *)&servaddr,
-				 &len);
-	packetBuffer[n] = '\0';
-	printf("Server : %s\n", packetBuffer);
-	close(sockfd);
-
 	if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
 	{
 		perror("socket creation failed");
@@ -191,6 +168,9 @@ void sendPacket(char packet[])
 		   sizeof(servaddr));
 
 	printf("Hello message sent.\n");
+
+	int n;
+	socklen_t len;
 
 	n = recvfrom(sockfd, (char *)packetBuffer, 128,
 				 MSG_WAITALL, (struct sockaddr *)&servaddr,
@@ -224,11 +204,6 @@ void createPackets()
 		// setup header
 		packet[0] = sequenceNum;
 		packet[1] = 'A'; // Error protocol: A if OK, B if ERROR
-		// packet[2] Checksum 10000's
-		// packet[3] Checksum 1000's
-		// packet[4] Checksum 100's
-		// packet[5] Checksum 10's
-		// packet[6] Checksum 10's
 
 		cout << "writing data to packet #" + std::to_string(packetCount) << endl;
 
@@ -262,21 +237,6 @@ void createPackets()
 
 			cout << "Packet #" << std::to_string(packetCount) << " to be sent: " << packetString << endl;
 			sendPacket(packet);
-
-			// int n;
-			// socklen_t len;
-
-			// sendto(sockfd, (const char *)hello, strlen(hello),
-			// 	   0, (const struct sockaddr *)&servaddr,
-			// 	   sizeof(servaddr));
-
-			// n = recvfrom(sockfd, (char *)packetBuffer, 128,
-			// 			 MSG_WAITALL, (struct sockaddr *)&servaddr,
-			// 			 &len);
-			// packetBuffer[n] = '\0';
-			// printf("Server : %s\n", packetBuffer);
-			// close(sockfd);
-
 			receivePacket(packet);
 			errorChecking(packet);
 			packetCount++;
