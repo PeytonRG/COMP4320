@@ -16,7 +16,7 @@ int sockfd;
 struct sockaddr_in cliaddr, servaddr;
 char *hello = "Hello from server";
 
-int connectToClient()
+int init()
 {
 	// Creating socket file descriptor
 	if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
@@ -70,118 +70,90 @@ bool validateChecksum(char buffer[])
 	return calculatedChecksum == passedChecksum;
 }
 
+/**
+ * Write the contents of the buffer's body to the file
+ * @param file Pointer to the output file stream to write to.
+ * @param buffer The buffer with the message to write to the file.
+ */
+int writeFile(ofstream &file, char buffer[])
+{
+	for (int i = 7; i < PACKET_SIZE; i++)
+	{
+		if (buffer[i] != '\0')
+			file << buffer[i];
+	}
+}
+
 int receiveMessage()
 {
 	char buffer[PACKET_SIZE] = {0};
 	int packetNum = 1;
+	ofstream file;
+	socklen_t socketLength;
+	int msgLength;
+
+	socketLength = sizeof(cliaddr); //len is value/resuslt
+	file.open("OutputFile.txt");
+
+	// Checks if file opened properly
+	if (!file.is_open())
+	{
+		printf("Can't open output file");
+		exit(EXIT_FAILURE);
+	}
+
 	while (true)
 	{
-		socklen_t socketLength;
-		int msgLength;
-
-		socketLength = sizeof(cliaddr); //len is value/resuslt
-
 		msgLength = recvfrom(sockfd, (char *)buffer, PACKET_SIZE,
 							 MSG_WAITALL, (struct sockaddr *)&cliaddr,
 							 &socketLength);
 		buffer[msgLength] = '\0';
 		cout << "Packet #" << packetNum << " received" << endl;
-
-		cout << "Calculating checksum for packet #" << packetNum << endl;
-		if (validateChecksum(buffer))
+		if (buffer[0] != '\0')
 		{
-			cout << "Checksums matched" << endl;
+			// first byte is seq #
+			cout << "Sequence #: " << buffer[0] << endl;
+			cout << "Calculating checksum for packet #" << packetNum << endl;
+			if (validateChecksum(buffer))
+			{
+				cout << "Checksums matched" << endl;
+			}
+			else
+			{
+				cout << "Packet #" << packetNum << " is lost or damaged." << endl;
+			}
 		}
+		// last packet. break out of the loop to close the ofstream
 		else
-		{
-			cout << "Packet #" << packetNum << " is lost or damaged." << endl;
-		}
+			break;
 
-		printf("Client : %s\n", buffer);
+		// print out the first 48 bytes of the body
+		for (int i = 7; i < 56; i++)
+		{
+			cout << buffer[i];
+		}
+		cout << endl;
+
+		writeFile(file, buffer);
+
 		packetNum++;
 		sendto(sockfd, (const char *)hello, strlen(hello),
 			   0, (const struct sockaddr *)&cliaddr,
 			   socketLength);
 		printf("Hello message sent.\n");
 	}
+	file.close();
+	sendto(sockfd, (const char *)hello, strlen(hello),
+		   0, (const struct sockaddr *)&cliaddr,
+		   socketLength);
+	printf("Final message sent.\n");
 
 	return 0;
-	// // Variable declarations
-	// char c;
-	// int packetNumber = 1;
-	// ofstream file;
-	// file.open("TestFile");
-
-	// // Checks if file opened properly
-	// if (!file.is_open())
-	// {
-	// 	printf("Can't open output file");
-	// 	exit(EXIT_FAILURE);
-	// }
-
-	// // int n = 240 * 1024;
-	// // setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &n, sizeof(n));
-
-	// while (c != '*')
-	// {
-	// 	int passed;
-	// 	if (recvfrom(sockfd, buffer, PACKET_SIZE, 0, (struct sockaddr *)&cliaddr, &cliLength) == -1)
-	// 	{
-	// 		perror("Error receiving message!!!");
-	// 		exit(EXIT_FAILURE);
-	// 	}
-
-	// 	printf("\n\nReceived packet %d...\n", packetNumber);
-	// 	packetNumber++;
-	// 	printf("The packet is being checked for errors...\n");
-	// 	passed = calculateChecksum(buffer);
-	// 	if (passed == 1)
-	// 	{
-	// 		printf("The packet was valid!\n");
-	// 		printf("Message reads:\n%s(%lu bytes).", buffer, sizeof(buffer));
-	// 		int i = 0;
-	// 		// fflush(of);
-	// 		for (i = 11; i < PACKET_SIZE; i++)
-	// 		{
-	// 			file << buffer[i];
-	// 			// putc(buffer[i], of);
-	// 			if (c == '\0')
-	// 			{
-	// 				c = buffer[i + 1];
-	// 			}
-	// 			c = buffer[i];
-	// 		}
-
-	// 		// if (send(new_socket, buffer, PACKET_SIZE, 0) == -1)
-	// 		// {
-	// 		// 	perror("Error sending message!!!");
-	// 		// 	exit(EXIT_FAILURE);
-	// 		// }
-	// 		if ((sendto(sockfd, buffer, PACKET_SIZE, 0, (struct sockaddr *)&cliaddr, cliLength)) == -1)
-	// 		{
-	// 			perror("Error sending message!!!");
-	// 			exit(EXIT_FAILURE);
-	// 		}
-	// 	}
-	// 	else
-	// 	{ // Packet corrupted
-	// 		printf("The packet was corrupted!\n");
-	// 		printf("\nMessage reads:\n%s(%lu bytes).", buffer, sizeof(buffer));
-	// 		buffer[10] = 'N';
-	// 		if ((sendto(sockfd, buffer, PACKET_SIZE, 0, (struct sockaddr *)&cliaddr, cliLength)) == -1)
-	// 		{
-	// 			perror("Error sending message!!!");
-	// 			exit(EXIT_FAILURE);
-	// 		}
-	// 	}
-	// }
-
-	// file.close();
 }
 
 int main(int argc, char const *argv[])
 {
-	connectToClient();
+	init();
 
 	receiveMessage();
 
