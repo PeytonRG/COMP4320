@@ -48,7 +48,8 @@ int connectToClient()
 int calculateChecksum(char packet[])
 {
 	int checksum = 0;
-	for (int i = 0; i < 128; i++)
+	// 7 is the first index of the message body
+	for (int i = 7; i < 128; i++)
 	{
 		checksum += packet[i];
 	}
@@ -70,6 +71,10 @@ int receiveMessage()
 							 &socketLength);
 		buffer[msgLength] = '\0';
 		cout << "Packet #" << packetNum << " received" << endl;
+
+		cout << "Calculating checksum for packet #" << packetNum << endl;
+		cout << "Checksum: " << calculateChecksum(buffer) << endl;
+
 		printf("Client : %s\n", buffer);
 		packetNum++;
 		sendto(sockfd, (const char *)hello, strlen(hello),

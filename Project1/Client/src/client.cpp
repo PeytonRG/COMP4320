@@ -40,29 +40,14 @@ int connect(const char *ipadr)
 	servaddr.sin_port = htons(PORT);
 	servaddr.sin_addr.s_addr = INADDR_ANY;
 
-	// int n;
-	// socklen_t len;
-
-	// sendto(sockfd, (const char *)hello, strlen(hello),
-	// 	   0, (const struct sockaddr *)&servaddr,
-	// 	   sizeof(servaddr));
-	// printf("Hello message sent.\n");
-
-	// n = recvfrom(sockfd, (char *)packetBuffer, 128,
-	// 			 MSG_WAITALL, (struct sockaddr *)&servaddr,
-	// 			 &len);
-	// packetBuffer[n] = '\0';
-	// printf("Server : %s\n", packetBuffer);
-
-	// close(sockfd);
-
 	return 0;
 }
 
 int calculateChecksum(char packet[])
 {
 	int checksum = 0;
-	for (int i = 0; i < 128; i++)
+	// 7 is the first index of the message body
+	for (int i = 7; i < 128; i++)
 	{
 		checksum += packet[i];
 	}
