@@ -41,13 +41,19 @@ int connect(const char *ipadr)
 	servaddr.sin_port = htons(PORT);
 	servaddr.sin_addr.s_addr = INADDR_ANY;
 
-	// n = recvfrom(sockfd, (char *)packetBuffer, 1024,
-	// 			 MSG_WAITALL, (struct sockaddr *)&servaddr,
-	// 			 &len);
-	// packetBuffer[n] = '\0';
-	// printf("Server : %s\n", packetBuffer);
+	int n;
+	socklen_t len;
 
-	// close(sockfd);
+	sendto(sockfd, (const char *)hello, strlen(hello),
+		   0, (const struct sockaddr *)&servaddr,
+		   sizeof(servaddr));
+	printf("Hello message sent.\n");
+
+	n = recvfrom(sockfd, (char *)packetBuffer, 128,
+				 MSG_WAITALL, (struct sockaddr *)&servaddr,
+				 &len);
+	packetBuffer[n] = '\0';
+	printf("Server : %s\n", packetBuffer);
 
 	return 0;
 }
