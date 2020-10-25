@@ -28,11 +28,11 @@ char packetBuffer[128] = {0};
 int connect(const char *ipadr)
 {
 	// Creating socket file descriptor
-	if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
-	{
-		perror("socket creation failed");
-		exit(EXIT_FAILURE);
-	}
+	// if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
+	// {
+	// 	perror("socket creation failed");
+	// 	exit(EXIT_FAILURE);
+	// }
 
 	memset(&servaddr, 0, sizeof(servaddr));
 
@@ -41,19 +41,21 @@ int connect(const char *ipadr)
 	servaddr.sin_port = htons(PORT);
 	servaddr.sin_addr.s_addr = INADDR_ANY;
 
-	int n;
-	socklen_t len;
+	// int n;
+	// socklen_t len;
 
-	sendto(sockfd, (const char *)hello, strlen(hello),
-		   0, (const struct sockaddr *)&servaddr,
-		   sizeof(servaddr));
-	printf("Hello message sent.\n");
+	// sendto(sockfd, (const char *)hello, strlen(hello),
+	// 	   0, (const struct sockaddr *)&servaddr,
+	// 	   sizeof(servaddr));
+	// printf("Hello message sent.\n");
 
-	n = recvfrom(sockfd, (char *)packetBuffer, 128,
-				 MSG_WAITALL, (struct sockaddr *)&servaddr,
-				 &len);
-	packetBuffer[n] = '\0';
-	printf("Server : %s\n", packetBuffer);
+	// n = recvfrom(sockfd, (char *)packetBuffer, 128,
+	// 			 MSG_WAITALL, (struct sockaddr *)&servaddr,
+	// 			 &len);
+	// packetBuffer[n] = '\0';
+	// printf("Server : %s\n", packetBuffer);
+
+	// close(sockfd);
 
 	return 0;
 }
@@ -157,6 +159,46 @@ void sendPacket(char packet[])
 {
 	// server is cutting it short atm
 	// send(sock, packets[i], strlen(packets[i]), 0);
+
+	if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
+	{
+		perror("socket creation failed");
+		exit(EXIT_FAILURE);
+	}
+
+	int n;
+	socklen_t len;
+
+	sendto(sockfd, (const char *)hello, strlen(hello),
+		   0, (const struct sockaddr *)&servaddr,
+		   sizeof(servaddr));
+
+	n = recvfrom(sockfd, (char *)packetBuffer, 128,
+				 MSG_WAITALL, (struct sockaddr *)&servaddr,
+				 &len);
+	packetBuffer[n] = '\0';
+	printf("Server : %s\n", packetBuffer);
+	close(sockfd);
+
+	if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
+	{
+		perror("socket creation failed");
+		exit(EXIT_FAILURE);
+	}
+
+	sendto(sockfd, (const char *)packet, 128,
+		   0, (const struct sockaddr *)&servaddr,
+		   sizeof(servaddr));
+
+	printf("Hello message sent.\n");
+
+	n = recvfrom(sockfd, (char *)packetBuffer, 128,
+				 MSG_WAITALL, (struct sockaddr *)&servaddr,
+				 &len);
+	packetBuffer[n] = '\0';
+	printf("Server : %s\n", packetBuffer);
+	close(sockfd);
+
 	cout << "All packets sent" << endl;
 }
 
@@ -201,7 +243,7 @@ void createPackets()
 		// check if packet is full and fill with null
 		while (charCountInBuffer < 128)
 		{
-			packet[charCountInBuffer] = NULL;
+			packet[charCountInBuffer] = '\0';
 			charCountInBuffer++;
 		}
 
@@ -220,6 +262,21 @@ void createPackets()
 
 			cout << "Packet #" << std::to_string(packetCount) << " to be sent: " << packetString << endl;
 			sendPacket(packet);
+
+			// int n;
+			// socklen_t len;
+
+			// sendto(sockfd, (const char *)hello, strlen(hello),
+			// 	   0, (const struct sockaddr *)&servaddr,
+			// 	   sizeof(servaddr));
+
+			// n = recvfrom(sockfd, (char *)packetBuffer, 128,
+			// 			 MSG_WAITALL, (struct sockaddr *)&servaddr,
+			// 			 &len);
+			// packetBuffer[n] = '\0';
+			// printf("Server : %s\n", packetBuffer);
+			// close(sockfd);
+
 			receivePacket(packet);
 			errorChecking(packet);
 			packetCount++;
