@@ -14,7 +14,7 @@ using namespace std;
 
 int sockfd;
 struct sockaddr_in cliaddr, servaddr;
-char buffer[1024] = {0};
+char buffer[PACKET_SIZE] = {0};
 char *hello = "Hello from server";
 
 int connectToClient()
@@ -41,6 +41,21 @@ int connectToClient()
 		perror("bind failed");
 		exit(EXIT_FAILURE);
 	}
+
+	socklen_t len;
+	int n;
+
+	len = sizeof(cliaddr); //len is value/resuslt
+
+	n = recvfrom(sockfd, (char *)buffer, PACKET_SIZE,
+				 MSG_WAITALL, (struct sockaddr *)&cliaddr,
+				 &len);
+	buffer[n] = '\0';
+	printf("Client : %s\n", buffer);
+	sendto(sockfd, (const char *)hello, strlen(hello),
+		   0, (const struct sockaddr *)&cliaddr,
+		   len);
+	printf("Hello message sent.\n");
 
 	return 0;
 }

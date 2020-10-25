@@ -22,7 +22,7 @@ int lossProb;
 int sockfd;
 struct sockaddr_in servaddr;
 char *hello = "Hello from client";
-char packetBuffer[1024] = {0};
+char packetBuffer[128] = {0};
 
 // connect to the client
 int connect(const char *ipadr)
@@ -154,21 +154,39 @@ void sendPackets(std::vector<char *> packets)
 {
 	// server is cutting it short atm
 	cout << "Sending packets..." << endl;
+	char buff[128];
+	buff[0] = 'a';
+	buff[1] = 'b';
+	buff[2] = NULL;
 	for (int i = 0; i < packets.size(); i++)
 	{
 		// send(sock, packets[i], strlen(packets[i]), 0);
 		socklen_t len;
 		int n;
 
-		// the second argument is what needs to be a char[]
-		sendto(sockfd, &packets[i], 128, 0, (const struct sockaddr *)&servaddr, sizeof(servaddr));
-		cout << "Packet #" << std::to_string(i + 1) << " sent" << endl;
+		sendto(sockfd, (const char *)hello, strlen(hello),
+			   0, (const struct sockaddr *)&servaddr,
+			   sizeof(servaddr));
+		printf("Hello message sent.\n");
 
-		n = recvfrom(sockfd, (char *)&packets, 128,
+		n = recvfrom(sockfd, (char *)packetBuffer, 128,
 					 MSG_WAITALL, (struct sockaddr *)&servaddr,
 					 &len);
 		packetBuffer[n] = '\0';
 		printf("Server : %s\n", packetBuffer);
+
+		// the second argument is what needs to be a char[]
+		// sendto(sockfd, (const char *)buff, 128, 0, (const struct sockaddr *)&servaddr, sizeof(servaddr));
+		// sendto(sockfd, (const char *)hello, strlen(hello),
+		// 	   0, (const struct sockaddr *)&servaddr,
+		// 	   sizeof(servaddr));
+		// cout << "Packet #" << std::to_string(i + 1) << " sent" << endl;
+
+		// n = recvfrom(sockfd, (char *)&packetBuffer, 128,
+		// 			 MSG_WAITALL, (struct sockaddr *)&servaddr,
+		// 			 &len);
+		// packetBuffer[n] = '\0';
+		// printf("Server : %s\n", packetBuffer);
 	}
 	cout << "All packets sent" << endl;
 }
