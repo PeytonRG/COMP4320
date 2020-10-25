@@ -122,31 +122,30 @@ void gremlin(char packet[]) {
 	}
 }
 
-void errorChecking(std::vector<char*> packets) {
-	for(int i = 0; i < packets.size(); i++) {
-		int receivedChecksum = (packets[i][2] * 10000) + (packets[i][3] * 1000) +
-			(packets[i][4] * 100) + (packets[i][5] * 10) + packets[i][6];
-		int actualChecksum = calculateChecksum(packets[i]);
+void errorChecking(char packet[]) {
+	int receivedChecksum = (packet[2] * 10000) + (packet[3] * 1000) +
+		(packet[4] * 100) + (packet[5] * 10) + packet[6];
+	int actualChecksum = calculateChecksum(packet);
 
-		if (receivedChecksum != actualChecksum) {
-			cout << "ERROR: Original packet checksum != its actual checksum";
-		}
+	if (receivedChecksum != actualChecksum) {
+		cout << "ERROR: Original packet checksum != its actual checksum";
 	}
+
 }
 
-void sendPackets(std::vector<char*> packets) {
+void sendPacket(char packet[]) {
 	// server is cutting it short atm
-	cout << "Sending packets..." << endl;
-	for(int i = 0; i < packets.size(); i++) {
-		// send(sock, packets[i], strlen(packets[i]), 0);
-		cout << "Packet #" << std::to_string(i + 1) << " sent" << endl;
-	}
+	// send(sock, packets[i], strlen(packets[i]), 0);
 	cout << "All packets sent" << endl;
 }
 
+void receivePacket(char packet[]) {
+	// int valread = read(sock, buffer, 1024);
+	// cout << buffer << endl;
+}
+
 // create packets
-std::vector<char*> createPackets() {
-	std::vector<char*> packets;
+void createPackets() {
 	int packetCount = 1;
 	int totalCharCount = 0;
 	char sequenceNum = '0';
@@ -190,9 +189,11 @@ std::vector<char*> createPackets() {
 			for (int i = 0; i < 128; i++) {
 				packetString += packet[i];
 			}
-			cout << "Packet #" << std::to_string(packetCount) << " to be sent: " << packetString << endl;
 
-			packets.push_back(packet);
+			cout << "Packet #" << std::to_string(packetCount) << " to be sent: " << packetString << endl;
+			sendPacket(packet);
+			receivePacket(packet);
+			errorChecking(packet);
 			packetCount++;
 			sequenceNum = (sequenceNum == '0') ? '1' : '0';
 		}
@@ -201,15 +202,7 @@ std::vector<char*> createPackets() {
 	// create blank ending packet
 	cout << "Creating end packet" << endl;
 	char endPacket[] = {'\0'};
-	packets.push_back(endPacket);
-	cout << "All packets created" << endl;
-	return packets;
-}
-
-std::vector<char*> receivePackets() {
-	// int valread = read(sock, buffer, 1024);
-	// cout << buffer << endl;
-	return {};
+	sendPacket(endPacket);
 }
 
 // read test file into buffer
@@ -232,10 +225,7 @@ int main(int argc, char const *argv[])
 
 	if(!readFile(TESTFILE)) { return -1; }
 	getGremlinProbabilities();
-	std::vector<char*> packets = createPackets();
-	sendPackets(packets);
-	packets = receivePackets();
-	errorChecking(packets);
+	createPackets();
 	
 	return 0;
 }
