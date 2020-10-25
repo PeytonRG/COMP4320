@@ -14,7 +14,6 @@ using namespace std;
 
 int sockfd;
 struct sockaddr_in cliaddr, servaddr;
-char buffer[PACKET_SIZE] = {0};
 char *hello = "Hello from server";
 
 int connectToClient()
@@ -49,15 +48,31 @@ int calculateChecksum(char packet[])
 {
 	int checksum = 0;
 	// 7 is the first index of the message body
-	for (int i = 7; i < 128; i++)
+	for (int i = 7; i < PACKET_SIZE; i++)
 	{
 		checksum += packet[i];
 	}
 	return checksum;
 }
 
+bool validateChecksum(char buffer[])
+{
+	int calculatedChecksum = calculateChecksum(buffer);
+	// cout << "Checksum: " << calculateChecksum(buffer) << endl;
+
+	string checkSumString;
+	for (int i = 2; i < 7; i++)
+	{
+		checkSumString += buffer[i];
+	}
+	int passedChecksum = stoi(checkSumString);
+
+	return calculatedChecksum == passedChecksum;
+}
+
 int receiveMessage()
 {
+	char buffer[PACKET_SIZE] = {0};
 	int packetNum = 1;
 	while (true)
 	{
@@ -73,7 +88,14 @@ int receiveMessage()
 		cout << "Packet #" << packetNum << " received" << endl;
 
 		cout << "Calculating checksum for packet #" << packetNum << endl;
-		cout << "Checksum: " << calculateChecksum(buffer) << endl;
+		if (validateChecksum(buffer))
+		{
+			cout << "Checksums matched" << endl;
+		}
+		else
+		{
+			cout << "Packet #" << packetNum << " is lost or damaged." << endl;
+		}
 
 		printf("Client : %s\n", buffer);
 		packetNum++;

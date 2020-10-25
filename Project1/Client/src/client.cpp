@@ -26,13 +26,6 @@ char packetBuffer[128] = {0};
 // connect to the client
 int connect(const char *ipadr)
 {
-	// Creating socket file descriptor
-	// if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
-	// {
-	// 	perror("socket creation failed");
-	// 	exit(EXIT_FAILURE);
-	// }
-
 	memset(&servaddr, 0, sizeof(servaddr));
 
 	// Filling server information
