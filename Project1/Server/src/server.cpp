@@ -14,14 +14,13 @@ using namespace std;
 
 int sockfd;
 struct sockaddr_in cliaddr, servaddr;
-char *hello = "Hello from server";
 
 int init()
 {
 	// Creating socket file descriptor
 	if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
 	{
-		perror("socket creation failed");
+		perror("Failed to create socket.");
 		exit(EXIT_FAILURE);
 	}
 
@@ -37,7 +36,7 @@ int init()
 	if (::bind(sockfd, (const struct sockaddr *)&servaddr,
 			   sizeof(servaddr)) < 0)
 	{
-		perror("bind failed");
+		perror("Failed to bind socket.");
 		exit(EXIT_FAILURE);
 	}
 
@@ -57,17 +56,24 @@ int calculateChecksum(char packet[])
 
 bool validateChecksum(char buffer[])
 {
-	int calculatedChecksum = calculateChecksum(buffer);
-	// cout << "Checksum: " << calculateChecksum(buffer) << endl;
-
-	string checkSumString;
-	for (int i = 2; i < 7; i++)
+	try
 	{
-		checkSumString += buffer[i];
-	}
-	int passedChecksum = stoi(checkSumString);
+		int calculatedChecksum = calculateChecksum(buffer);
 
-	return calculatedChecksum == passedChecksum;
+		string checkSumString;
+		for (int i = 2; i < 7; i++)
+		{
+			checkSumString += buffer[i];
+		}
+		int passedChecksum = stoi(checkSumString);
+
+		return calculatedChecksum == passedChecksum;
+	}
+	// the first character in the passed checksum is not an int
+	catch (std::invalid_argument)
+	{
+		return false;
+	}
 }
 
 /**
@@ -87,7 +93,6 @@ int writeFile(ofstream &file, char buffer[])
 int receiveMessage()
 {
 	char buffer[PACKET_SIZE] = {0};
-	int packetNum = 1;
 	ofstream file;
 	socklen_t socketLength;
 	int msgLength;
@@ -98,35 +103,37 @@ int receiveMessage()
 	// Checks if file opened properly
 	if (!file.is_open())
 	{
-		printf("Can't open output file");
+		cout << "Failed to open output file." << endl;
 		exit(EXIT_FAILURE);
 	}
 
+	int previousSequenceNumber;
 	while (true)
 	{
 		msgLength = recvfrom(sockfd, (char *)buffer, PACKET_SIZE,
 							 MSG_WAITALL, (struct sockaddr *)&cliaddr,
 							 &socketLength);
 		buffer[msgLength] = '\0';
-		cout << "Packet #" << packetNum << " received" << endl;
-		if (buffer[0] != '\0')
+		char sequenceNumber = buffer[0];
+
+		if (sequenceNumber != '\0')
 		{
 			// first byte is seq #
-			cout << "Sequence #: " << buffer[0] << endl;
-			cout << "Calculating checksum for packet #" << packetNum << endl;
+			cout << "Packet " << sequenceNumber << " received. Checking for errors..." << endl;
 			if (validateChecksum(buffer))
 			{
-				cout << "Checksums matched" << endl;
+				cout << "Packet " << sequenceNumber << " is ok." << endl;
 			}
 			else
 			{
-				cout << "Packet #" << packetNum << " is lost or damaged." << endl;
+				cout << "Packet " << sequenceNumber << " is damaged." << endl;
 			}
 		}
 		// last packet. break out of the loop to close the ofstream
 		else
 			break;
 
+		cout << "Printing the first 48 bytes of packet " << sequenceNumber << ":" << endl;
 		// print out the first 48 bytes of the body
 		for (int i = 7; i < 56; i++)
 		{
@@ -136,17 +143,23 @@ int receiveMessage()
 
 		writeFile(file, buffer);
 
-		packetNum++;
-		sendto(sockfd, (const char *)hello, strlen(hello),
+		char resp[18];
+		sprintf(resp, "Packet %c received.", sequenceNumber);
+
+		sendto(sockfd, (const char *)resp, strlen(resp),
 			   0, (const struct sockaddr *)&cliaddr,
 			   socketLength);
-		printf("Hello message sent.\n");
+		cout << "Sending: " << resp << endl;
+		cout << endl;
 	}
+	cout << "Final packet received. Writing file." << endl;
 	file.close();
-	sendto(sockfd, (const char *)hello, strlen(hello),
+
+	char successMsg[] = "PUT successfully completed";
+	sendto(sockfd, (const char *)successMsg, strlen(successMsg),
 		   0, (const struct sockaddr *)&cliaddr,
 		   socketLength);
-	printf("Final message sent.\n");
+	cout << "Sending: " << successMsg << endl;
 
 	return 0;
 }
