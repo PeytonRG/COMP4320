@@ -107,7 +107,7 @@ int receiveMessage()
 		exit(EXIT_FAILURE);
 	}
 
-	int previousSequenceNumber;
+	char previousSequenceNumber;
 	while (true)
 	{
 		msgLength = recvfrom(sockfd, (char *)buffer, PACKET_SIZE,
@@ -116,26 +116,35 @@ int receiveMessage()
 		buffer[msgLength] = '\0';
 		char sequenceNumber = buffer[0];
 
-		if (sequenceNumber != '\0')
+		if (sequenceNumber == '\0')
 		{
-			// first byte is seq #
+			// This is the last packet. Break out to close the file stream.
+			break;
+		}
+		else if (sequenceNumber == previousSequenceNumber)
+		{
+			cout << "Packet " << sequenceNumber << " has a duplicate sequence number. A packet was lost." << endl;
+		}
+		else
+		{
 			cout << "Packet " << sequenceNumber << " received. Checking for errors..." << endl;
-			if (validateChecksum(buffer))
-			{
-				cout << "Packet " << sequenceNumber << " is ok." << endl;
-			}
-			else
+			// checksum validation fails or the sequence number is invalid
+			if (!validateChecksum(buffer) || (sequenceNumber != '0' && sequenceNumber != '1'))
 			{
 				cout << "Packet " << sequenceNumber << " is damaged." << endl;
 			}
+			else
+			{
+				cout << "Packet " << sequenceNumber << " is ok." << endl;
+			}
 		}
-		// last packet. break out of the loop to close the ofstream
-		else
-			break;
+
+		// update the previous number to detect future packet loss
+		previousSequenceNumber = sequenceNumber;
 
 		cout << "Printing the first 48 bytes of packet " << sequenceNumber << ":" << endl;
 		// print out the first 48 bytes of the body
-		for (int i = 7; i < 56; i++)
+		for (int i = 0; i < 48; i++)
 		{
 			cout << buffer[i];
 		}
