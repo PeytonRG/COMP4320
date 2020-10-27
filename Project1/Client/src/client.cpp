@@ -1,4 +1,10 @@
-// Client side C/C++ program to demonstrate Socket programming
+/**
+ * COMP 4320 Project 1
+ * FTP Client over UDP
+ * Grant Haislip (gzh0020)
+ * Peyton Gasink (prg0011)
+ */
+
 #include <stdio.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
@@ -16,65 +22,54 @@
 using std::cout;
 using std::endl;
 
-int sock;
-int valread;
 std::stringstream buffer;
 int damageProb;
 int lossProb;
+int sockfd;
+struct sockaddr_in servaddr;
+char packetBuffer[128] = {0};
 
 // connect to the client
-int connect(const char* ipadr) {
-	int sock = 0;
-	struct sockaddr_in serv_addr;
-	if ((sock = socket(AF_INET, SOCK_STREAM, 0)) < 0)
-	{
-		cout << "Socket creation error" << endl;
-		return -1;
-	}
+int connect(const char *ipadr)
+{
+	memset(&servaddr, 0, sizeof(servaddr));
 
-	serv_addr.sin_family = AF_INET;
-	serv_addr.sin_port = htons(PORT);
+	// Filling server information
+	servaddr.sin_family = AF_INET;
+	servaddr.sin_port = htons(PORT);
+	servaddr.sin_addr.s_addr = INADDR_ANY;
 
-
-	// Convert IPv4 and IPv6 addresses from text to binary form
-	if (inet_pton(AF_INET, ipadr, &serv_addr.sin_addr) <= 0)
-	{
-		cout << "Invalid address/ Address not supported" << endl;
-		return -1;
-	}
-
-	if (connect(sock, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
-	{
-		cout << "Connection failed" << endl;
-		return -1;
-	}
-
-	return sock;
+	return 0;
 }
 
-int calculateChecksum(char packet[]) {
+int calculateChecksum(char packet[])
+{
 	int checksum = 0;
-	for (int i = 0; i < 128; i++) {
+	// 7 is the first index of the message body
+	for (int i = 7; i < 128; i++)
+	{
 		checksum += packet[i];
 	}
 	return checksum;
 }
 
 // calculate checksum by summing bytes of the packet
-void setupChecksum(char packet[], int packetCount) {
-    int checksum = calculateChecksum(packet);
+void setupChecksum(char packet[], int packetCount)
+{
+	int checksum = calculateChecksum(packet);
 
 	// place in packet
 	char digits[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'};
 	packet[2] = digits[checksum / 10000 % 10];
 	packet[3] = digits[checksum / 1000 % 10];
 	packet[4] = digits[checksum / 100 % 10];
-	packet[5] = digits[checksum / 10  % 10];
+	packet[5] = digits[checksum / 10 % 10];
 	packet[6] = digits[checksum % 10];
 	cout << "Packet #" << packetCount << " checksum: " << std::to_string(checksum) << endl;
 }
 
-int getGremlinProbabilities() {
+int getGremlinProbabilities()
+{
 	cout << "Enter probability for packet damage (0-100): ";
 	std::cin >> damageProb;
 	cout << "Enter probability for packet loss (0-100): ";
@@ -82,29 +77,36 @@ int getGremlinProbabilities() {
 	cout << "Gremlin probabilities are (" << std::to_string(damageProb) << "% damage) and (" << std::to_string(lossProb) << "% loss)" << endl;
 }
 
-void damage(char packet[], int amount) {
+void damage(char packet[], int amount)
+{
 	// get random index
-	for (int i = 0; i < amount; i++) {
+	for (int i = 0; i < amount; i++)
+	{
 		int dice = rand() % 127;
 		packet[dice] = 'a' + rand() % 26;
 	}
 	cout << "GREMLIN: Packet damanged " << amount << " times" << endl;
 }
 
-void gremlin(char packet[]) {
+void gremlin(char packet[])
+{
 	// get random number 1-100
 	int dice = rand() % 100 + 1;
 
 	// check if damanged
-	if (dice <= damageProb) {
+	if (dice <= damageProb)
+	{
 		dice = rand() % 10 + 1;
-		if (dice == 10) {
+		if (dice == 10)
+		{
 			damage(packet, 3);
 		}
-		else if (dice >= 8) {
+		else if (dice >= 8)
+		{
 			damage(packet, 2);
 		}
-		else {
+		else
+		{
 			damage(packet, 1);
 		}
 		return;
@@ -112,70 +114,95 @@ void gremlin(char packet[]) {
 
 	// check if lost, set to null
 	dice = rand() % 100 + 1;
-	if (dice <= lossProb){
+	if (dice <= lossProb)
+	{
 		cout << "GREMLIN: Packet lost" << endl;
 		packet[1] = 'B';
 	}
 	// packet successful
-	else {
+	else
+	{
 		cout << "GREMLIN: Packet correctly delivered" << endl;
 	}
 }
 
-void errorChecking(char packet[]) {
+void errorChecking(char packet[])
+{
 	int receivedChecksum = (packet[2] * 10000) + (packet[3] * 1000) +
-		(packet[4] * 100) + (packet[5] * 10) + packet[6];
+						   (packet[4] * 100) + (packet[5] * 10) + packet[6];
 	int actualChecksum = calculateChecksum(packet);
 
-	if (receivedChecksum != actualChecksum) {
+	if (receivedChecksum != actualChecksum)
+	{
 		cout << "ERROR: Original packet checksum != its actual checksum";
 	}
-
 }
 
-void sendPacket(char packet[]) {
+void sendPacket(char packet[])
+{
 	// server is cutting it short atm
-	// send(sock, packets[i], strlen(packets[i]), 0);
+	if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0)
+	{
+		perror("socket creation failed");
+		exit(EXIT_FAILURE);
+	}
+
+	sendto(sockfd, (const char *)packet, 128,
+		   0, (const struct sockaddr *)&servaddr,
+		   sizeof(servaddr));
+
+	printf("Hello message sent.\n");
+
+	int n;
+	socklen_t len;
+
+	n = recvfrom(sockfd, (char *)packetBuffer, 128,
+				 MSG_WAITALL, (struct sockaddr *)&servaddr,
+				 &len);
+	packetBuffer[n] = '\0';
+	printf("Server : %s\n", packetBuffer);
+	close(sockfd);
+
 	cout << "All packets sent" << endl;
 }
 
-void receivePacket(char packet[]) {
+void receivePacket(char packet[])
+{
 	// int valread = read(sock, buffer, 1024);
 	// cout << buffer << endl;
 }
 
 // create packets
-void createPackets() {
+void createPackets()
+{
 	int packetCount = 1;
 	int totalCharCount = 0;
 	char sequenceNum = '0';
 	int headerSize = 7;
 
-	while (totalCharCount < buffer.str().length()) {
+	while (totalCharCount < buffer.str().length())
+	{
 		char packet[128];
 		int charCountInBuffer = headerSize; // start after header
 
 		// setup header
 		packet[0] = sequenceNum;
 		packet[1] = 'A'; // Error protocol: A if OK, B if ERROR
-		// packet[2] Checksum 10000's
-		// packet[3] Checksum 1000's
-		// packet[4] Checksum 100's
-		// packet[5] Checksum 10's
-		// packet[6] Checksum 10's 
 
 		cout << "writing data to packet #" + std::to_string(packetCount) << endl;
 
 		// loop until packet is full or buffer is completely read
-		while (totalCharCount < buffer.str().length() && charCountInBuffer < 128) {
+		while (totalCharCount < buffer.str().length() && charCountInBuffer < 128)
+		{
 			packet[charCountInBuffer] = buffer.str()[totalCharCount];
 			charCountInBuffer++;
 			totalCharCount++;
 		}
 
 		// check if packet is full and fill with null
-		while (charCountInBuffer < 128) {
-			packet[charCountInBuffer] = NULL;
+		while (charCountInBuffer < 128)
+		{
+			packet[charCountInBuffer] = '\0';
 			charCountInBuffer++;
 		}
 
@@ -183,10 +210,12 @@ void createPackets() {
 		gremlin(packet);
 
 		// if packet not lost
-		if (packet[1] == 'A') {
+		if (packet[1] == 'A')
+		{
 			// show packet info
 			std::string packetString = "";
-			for (int i = 0; i < 128; i++) {
+			for (int i = 0; i < 128; i++)
+			{
 				packetString += packet[i];
 			}
 
@@ -198,7 +227,7 @@ void createPackets() {
 			sequenceNum = (sequenceNum == '0') ? '1' : '0';
 		}
 	}
-	
+
 	// create blank ending packet
 	cout << "Creating end packet" << endl;
 	char endPacket[] = {'\0'};
@@ -206,9 +235,11 @@ void createPackets() {
 }
 
 // read test file into buffer
-bool readFile(std::string fileName) {
+bool readFile(std::string fileName)
+{
 	std::fstream file(fileName);
-	if (!file.is_open()) { 
+	if (!file.is_open())
+	{
 		cout << "File could not be found" << endl;
 		return false;
 	}
@@ -218,14 +249,20 @@ bool readFile(std::string fileName) {
 }
 
 int main(int argc, char const *argv[])
-{	
+{
 	srand(time(0));
-	sock = connect(IPADDR);
-	if (sock < 0) { return -1; }
+	sockfd = connect(IPADDR);
+	if (sockfd < 0)
+	{
+		return -1;
+	}
 
-	if(!readFile(TESTFILE)) { return -1; }
+	if (!readFile(TESTFILE))
+	{
+		return -1;
+	}
 	getGremlinProbabilities();
 	createPackets();
-	
+
 	return 0;
 }
