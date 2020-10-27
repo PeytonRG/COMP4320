@@ -1,5 +1,10 @@
-// Server side C/C++ program to demonstrate Socket programming
-// https://www.geeksforgeeks.org/udp-server-client-implementation-c/?ref=lbp
+/**
+ * COMP 4320 Project 1
+ * FTP Server over UDP
+ * Peyton Gasink (prg0011)
+ * Grant Haislip (gzh0020)
+ */
+
 #include <unistd.h>
 #include <stdio.h>
 #include <sys/socket.h>
@@ -15,6 +20,9 @@ using namespace std;
 int sockfd;
 struct sockaddr_in cliaddr, servaddr;
 
+/**
+ * Bind the server to localhost and the port number defined.
+ */
 int init()
 {
 	// Creating socket file descriptor
@@ -43,17 +51,25 @@ int init()
 	return 0;
 }
 
-int calculateChecksum(char packet[])
+/**
+ * Calculate the checksum by adding the bytes of the packet body.
+ * @param buffer The message received.
+ */
+int calculateChecksum(char buffer[])
 {
 	int checksum = 0;
 	// 7 is the first index of the message body
 	for (int i = 7; i < PACKET_SIZE; i++)
 	{
-		checksum += packet[i];
+		checksum += buffer[i];
 	}
 	return checksum;
 }
 
+/**
+ * Compare the checksum calculated with the checksum in the message header.
+ * @param buffer The message received.
+ */
 bool validateChecksum(char buffer[])
 {
 	try
@@ -69,7 +85,8 @@ bool validateChecksum(char buffer[])
 
 		return calculatedChecksum == passedChecksum;
 	}
-	// the first character in the passed checksum is not an int
+	// the first character in the passed checksum is not an int,
+	// which means it's damaged
 	catch (std::invalid_argument)
 	{
 		return false;
@@ -77,7 +94,7 @@ bool validateChecksum(char buffer[])
 }
 
 /**
- * Write the contents of the buffer's body to the file
+ * Write the contents of the buffer's body to the filestream.
  * @param file Pointer to the output file stream to write to.
  * @param buffer The buffer with the message to write to the file.
  */
@@ -90,6 +107,24 @@ int writeFile(ofstream &file, char buffer[])
 	}
 }
 
+/**
+ * Sends response messages to the client.
+ * @param resp The response message to be sent.
+ */
+int sendResponse(char resp[], socklen_t socketLength)
+{
+	sendto(sockfd, (const char *)resp, strlen(resp),
+		   0, (const struct sockaddr *)&cliaddr,
+		   socketLength);
+	cout << "Sending: " << resp << endl;
+	cout << endl;
+
+	return 0;
+}
+
+/**
+ * Listens for a message from the client and writes the output file.
+ */
 int receiveMessage()
 {
 	char buffer[PACKET_SIZE] = {0};
@@ -154,21 +189,13 @@ int receiveMessage()
 
 		char resp[18];
 		sprintf(resp, "Packet %c received.", sequenceNumber);
-
-		sendto(sockfd, (const char *)resp, strlen(resp),
-			   0, (const struct sockaddr *)&cliaddr,
-			   socketLength);
-		cout << "Sending: " << resp << endl;
-		cout << endl;
+		sendResponse(resp, socketLength);
 	}
 	cout << "Final packet received. Writing file." << endl;
 	file.close();
 
 	char successMsg[] = "PUT successfully completed";
-	sendto(sockfd, (const char *)successMsg, strlen(successMsg),
-		   0, (const struct sockaddr *)&cliaddr,
-		   socketLength);
-	cout << "Sending: " << successMsg << endl;
+	sendResponse(successMsg, socketLength);
 
 	return 0;
 }

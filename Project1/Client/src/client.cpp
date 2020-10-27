@@ -1,4 +1,10 @@
-// Client side C/C++ program to demonstrate Socket programming
+/**
+ * COMP 4320 Project 1
+ * FTP Client over UDP
+ * Grant Haislip (gzh0020)
+ * Peyton Gasink (prg0011)
+ */
+
 #include <stdio.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>
