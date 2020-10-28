@@ -16,8 +16,8 @@
 #include <numeric>
 #include <vector>
 #include <cstdlib>
+#include <netdb.h>
 #define PORT 8080
-#define IPADDR "127.0.0.1"
 #define TESTFILE "./src/TestFile"
 using std::cout;
 using std::endl;
@@ -30,14 +30,19 @@ struct sockaddr_in servaddr;
 char packetBuffer[128] = {0};
 
 // connect to the client
-int connect(const char *ipadr)
+int connect()
 {
 	memset(&servaddr, 0, sizeof(servaddr));
+
+	std::string ipaddr;
+	cout << "Enter your IP Address: ";
+	std::cin >> ipaddr;
 
 	// Filling server information
 	servaddr.sin_family = AF_INET;
 	servaddr.sin_port = htons(PORT);
-	servaddr.sin_addr.s_addr = INADDR_ANY;
+	// servaddr.sin_addr.s_addr = INADDR_ANY;
+	servaddr.sin_addr.s_addr = inet_addr(ipaddr.c_str());
 
 	return 0;
 }
@@ -126,18 +131,6 @@ void gremlin(char packet[])
 	}
 }
 
-void errorChecking(char packet[])
-{
-	int receivedChecksum = (packet[2] * 10000) + (packet[3] * 1000) +
-						   (packet[4] * 100) + (packet[5] * 10) + packet[6];
-	int actualChecksum = calculateChecksum(packet);
-
-	if (receivedChecksum != actualChecksum)
-	{
-		cout << "ERROR: Original packet checksum != its actual checksum";
-	}
-}
-
 void sendPacket(char packet[])
 {
 	// server is cutting it short atm
@@ -150,26 +143,15 @@ void sendPacket(char packet[])
 	sendto(sockfd, (const char *)packet, 128,
 		   0, (const struct sockaddr *)&servaddr,
 		   sizeof(servaddr));
-
-	printf("Hello message sent.\n");
-
+	cout << "Packet sent" << endl;
 	int n;
 	socklen_t len;
-
 	n = recvfrom(sockfd, (char *)packetBuffer, 128,
 				 MSG_WAITALL, (struct sockaddr *)&servaddr,
 				 &len);
 	packetBuffer[n] = '\0';
 	printf("Server : %s\n", packetBuffer);
 	close(sockfd);
-
-	cout << "All packets sent" << endl;
-}
-
-void receivePacket(char packet[])
-{
-	// int valread = read(sock, buffer, 1024);
-	// cout << buffer << endl;
 }
 
 // create packets
@@ -221,8 +203,6 @@ void createPackets()
 
 			cout << "Packet #" << std::to_string(packetCount) << " to be sent: " << packetString << endl;
 			sendPacket(packet);
-			receivePacket(packet);
-			errorChecking(packet);
 			packetCount++;
 			sequenceNum = (sequenceNum == '0') ? '1' : '0';
 		}
@@ -232,6 +212,7 @@ void createPackets()
 	cout << "Creating end packet" << endl;
 	char endPacket[] = {'\0'};
 	sendPacket(endPacket);
+	cout << "PUT TestFile" << endl;
 }
 
 // read test file into buffer
@@ -248,21 +229,28 @@ bool readFile(std::string fileName)
 	return true;
 }
 
+bool sendRequest()
+{
+	char request[] = "PUT TestFile";
+	sendto(sockfd, (const char *)request, strlen(request),
+		   0, (const struct sockaddr *)&servaddr,
+		   sizeof(servaddr));
+	cout << "Sending: " << request << endl;
+	cout << endl;
+
+	return true;
+}
+
 int main(int argc, char const *argv[])
 {
 	srand(time(0));
-	sockfd = connect(IPADDR);
-	if (sockfd < 0)
-	{
-		return -1;
-	}
+	sockfd = connect();
+	if (sockfd != 0) { return -1; }
 
-	if (!readFile(TESTFILE))
-	{
-		return -1;
-	}
+	if (!sendRequest()) { return -1; }
+	if (!readFile(TESTFILE)) { return -1; }
+
 	getGremlinProbabilities();
 	createPackets();
-
 	return 0;
 }
