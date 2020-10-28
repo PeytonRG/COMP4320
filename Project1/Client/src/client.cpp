@@ -80,6 +80,7 @@ int getGremlinProbabilities()
 	cout << "Enter probability for packet loss (0-100): ";
 	std::cin >> lossProb;
 	cout << "Gremlin probabilities are (" << std::to_string(damageProb) << "% damage) and (" << std::to_string(lossProb) << "% loss)" << endl;
+	return 0;
 }
 
 void damage(char packet[], int amount)
@@ -247,16 +248,18 @@ int main(int argc, char const *argv[])
 		return -1;
 	}
 
-	if (!sendRequest())
-	{
-		return -1;
-	}
 	if (!readFile(TESTFILE))
 	{
 		return -1;
 	}
 
 	getGremlinProbabilities();
+
+	if (!sendRequest())
+	{
+		return -1;
+	}
+
 	createPackets();
 	return 0;
 }

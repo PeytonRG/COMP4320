@@ -106,6 +106,7 @@ int writeFile(ofstream &file, char buffer[])
 		if (buffer[i] != '\0')
 			file << buffer[i];
 	}
+	return 0;
 }
 
 /**
