@@ -212,7 +212,6 @@ void createPackets()
 	cout << "Creating end packet" << endl;
 	char endPacket[] = {'\0'};
 	sendPacket(endPacket);
-	cout << "PUT TestFile" << endl;
 }
 
 // read test file into buffer
