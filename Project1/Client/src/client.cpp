@@ -35,14 +35,14 @@ int connect()
 	memset(&servaddr, 0, sizeof(servaddr));
 
 	std::string ipaddr;
-	cout << "Enter your IP Address: ";
+	cout << "Enter the server's public IP Address: ";
 	std::cin >> ipaddr;
 
 	// Filling server information
 	servaddr.sin_family = AF_INET;
 	servaddr.sin_port = htons(PORT);
-	// servaddr.sin_addr.s_addr = INADDR_ANY;
-	servaddr.sin_addr.s_addr = inet_addr(ipaddr.c_str());
+	servaddr.sin_addr.s_addr = INADDR_ANY;
+	// servaddr.sin_addr.s_addr = inet_addr(ipaddr.c_str());
 
 	return 0;
 }
@@ -59,7 +59,7 @@ int calculateChecksum(char packet[])
 }
 
 // calculate checksum by summing bytes of the packet
-void setupChecksum(char packet[], int packetCount)
+void setupChecksum(char packet[])
 {
 	int checksum = calculateChecksum(packet);
 
@@ -70,7 +70,7 @@ void setupChecksum(char packet[], int packetCount)
 	packet[4] = digits[checksum / 100 % 10];
 	packet[5] = digits[checksum / 10 % 10];
 	packet[6] = digits[checksum % 10];
-	cout << "Packet #" << packetCount << " checksum: " << std::to_string(checksum) << endl;
+	cout << "Checksum: " << std::to_string(checksum) << endl;
 }
 
 int getGremlinProbabilities()
@@ -90,7 +90,7 @@ void damage(char packet[], int amount)
 		int dice = rand() % 127;
 		packet[dice] = 'a' + rand() % 26;
 	}
-	cout << "GREMLIN: Packet damanged " << amount << " times" << endl;
+	cout << "GREMLIN: Packet damaged " << amount << " times" << endl;
 }
 
 void gremlin(char packet[])
@@ -157,7 +157,6 @@ void sendPacket(char packet[])
 // create packets
 void createPackets()
 {
-	int packetCount = 1;
 	int totalCharCount = 0;
 	char sequenceNum = '0';
 	int headerSize = 7;
@@ -171,7 +170,7 @@ void createPackets()
 		packet[0] = sequenceNum;
 		packet[1] = 'A'; // Error protocol: A if OK, B if ERROR
 
-		cout << "writing data to packet #" + std::to_string(packetCount) << endl;
+		cout << "writing data to packet #" << sequenceNum << endl;
 
 		// loop until packet is full or buffer is completely read
 		while (totalCharCount < buffer.str().length() && charCountInBuffer < 128)
@@ -188,23 +187,22 @@ void createPackets()
 			charCountInBuffer++;
 		}
 
-		setupChecksum(packet, packetCount);
+		setupChecksum(packet);
 		gremlin(packet);
+		sequenceNum = (sequenceNum == '0') ? '1' : '0';
 
 		// if packet not lost
 		if (packet[1] == 'A')
 		{
 			// show packet info
 			std::string packetString = "";
-			for (int i = 0; i < 128; i++)
+			for (int i = 0; i < 48; i++)
 			{
 				packetString += packet[i];
 			}
 
-			cout << "Packet #" << std::to_string(packetCount) << " to be sent: " << packetString << endl;
+			cout << "Packet #" << sequenceNum << " to be sent: " << packetString << endl;
 			sendPacket(packet);
-			packetCount++;
-			sequenceNum = (sequenceNum == '0') ? '1' : '0';
 		}
 	}
 
@@ -244,10 +242,19 @@ int main(int argc, char const *argv[])
 {
 	srand(time(0));
 	sockfd = connect();
-	if (sockfd != 0) { return -1; }
+	if (sockfd != 0)
+	{
+		return -1;
+	}
 
-	if (!sendRequest()) { return -1; }
-	if (!readFile(TESTFILE)) { return -1; }
+	if (!sendRequest())
+	{
+		return -1;
+	}
+	if (!readFile(TESTFILE))
+	{
+		return -1;
+	}
 
 	getGremlinProbabilities();
 	createPackets();

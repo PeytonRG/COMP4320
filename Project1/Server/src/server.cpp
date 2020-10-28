@@ -13,6 +13,7 @@
 #include <string.h>
 #include <iostream>
 #include <fstream>
+#include <stdexcept>
 #define PORT 8080
 #define PACKET_SIZE 128
 using namespace std;
@@ -132,7 +133,7 @@ int receiveMessage()
 	socklen_t socketLength;
 	int msgLength;
 
-	socketLength = sizeof(cliaddr); //len is value/resuslt
+	socketLength = sizeof(cliaddr);
 	file.open("OutputFile.txt");
 
 	// Checks if file opened properly
@@ -202,6 +203,8 @@ int receiveMessage()
 
 int main(int argc, char const *argv[])
 {
+	cout << "Starting server" << endl;
+
 	init();
 
 	receiveMessage();
