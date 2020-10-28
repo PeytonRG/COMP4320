@@ -16,8 +16,8 @@
 #include <numeric>
 #include <vector>
 #include <cstdlib>
+#include <netdb.h>
 #define PORT 8080
-#define IPADDR "127.0.0.1"
 #define TESTFILE "./src/TestFile"
 using std::cout;
 using std::endl;
@@ -30,14 +30,19 @@ struct sockaddr_in servaddr;
 char packetBuffer[128] = {0};
 
 // connect to the client
-int connect(const char *ipadr)
+int connect()
 {
 	memset(&servaddr, 0, sizeof(servaddr));
+
+	std::string ipaddr;
+	cout << "Enter the server's public IP Address: ";
+	std::cin >> ipaddr;
 
 	// Filling server information
 	servaddr.sin_family = AF_INET;
 	servaddr.sin_port = htons(PORT);
 	servaddr.sin_addr.s_addr = INADDR_ANY;
+	// servaddr.sin_addr.s_addr = inet_addr(ipaddr.c_str());
 
 	return 0;
 }
@@ -54,7 +59,7 @@ int calculateChecksum(char packet[])
 }
 
 // calculate checksum by summing bytes of the packet
-void setupChecksum(char packet[], int packetCount)
+void setupChecksum(char packet[])
 {
 	int checksum = calculateChecksum(packet);
 
@@ -65,7 +70,7 @@ void setupChecksum(char packet[], int packetCount)
 	packet[4] = digits[checksum / 100 % 10];
 	packet[5] = digits[checksum / 10 % 10];
 	packet[6] = digits[checksum % 10];
-	cout << "Packet #" << packetCount << " checksum: " << std::to_string(checksum) << endl;
+	cout << "Checksum: " << std::to_string(checksum) << endl;
 }
 
 int getGremlinProbabilities()
@@ -75,6 +80,7 @@ int getGremlinProbabilities()
 	cout << "Enter probability for packet loss (0-100): ";
 	std::cin >> lossProb;
 	cout << "Gremlin probabilities are (" << std::to_string(damageProb) << "% damage) and (" << std::to_string(lossProb) << "% loss)" << endl;
+	return 0;
 }
 
 void damage(char packet[], int amount)
@@ -85,7 +91,7 @@ void damage(char packet[], int amount)
 		int dice = rand() % 127;
 		packet[dice] = 'a' + rand() % 26;
 	}
-	cout << "GREMLIN: Packet damanged " << amount << " times" << endl;
+	cout << "GREMLIN: Packet damaged " << amount << " times" << endl;
 }
 
 void gremlin(char packet[])
@@ -126,18 +132,6 @@ void gremlin(char packet[])
 	}
 }
 
-void errorChecking(char packet[])
-{
-	int receivedChecksum = (packet[2] * 10000) + (packet[3] * 1000) +
-						   (packet[4] * 100) + (packet[5] * 10) + packet[6];
-	int actualChecksum = calculateChecksum(packet);
-
-	if (receivedChecksum != actualChecksum)
-	{
-		cout << "ERROR: Original packet checksum != its actual checksum";
-	}
-}
-
 void sendPacket(char packet[])
 {
 	// server is cutting it short atm
@@ -150,32 +144,20 @@ void sendPacket(char packet[])
 	sendto(sockfd, (const char *)packet, 128,
 		   0, (const struct sockaddr *)&servaddr,
 		   sizeof(servaddr));
-
-	printf("Hello message sent.\n");
-
+	cout << "Packet sent" << endl;
 	int n;
 	socklen_t len;
-
 	n = recvfrom(sockfd, (char *)packetBuffer, 128,
 				 MSG_WAITALL, (struct sockaddr *)&servaddr,
 				 &len);
 	packetBuffer[n] = '\0';
 	printf("Server : %s\n", packetBuffer);
 	close(sockfd);
-
-	cout << "All packets sent" << endl;
-}
-
-void receivePacket(char packet[])
-{
-	// int valread = read(sock, buffer, 1024);
-	// cout << buffer << endl;
 }
 
 // create packets
 void createPackets()
 {
-	int packetCount = 1;
 	int totalCharCount = 0;
 	char sequenceNum = '0';
 	int headerSize = 7;
@@ -189,7 +171,7 @@ void createPackets()
 		packet[0] = sequenceNum;
 		packet[1] = 'A'; // Error protocol: A if OK, B if ERROR
 
-		cout << "writing data to packet #" + std::to_string(packetCount) << endl;
+		cout << "writing data to packet #" << sequenceNum << endl;
 
 		// loop until packet is full or buffer is completely read
 		while (totalCharCount < buffer.str().length() && charCountInBuffer < 128)
@@ -206,25 +188,22 @@ void createPackets()
 			charCountInBuffer++;
 		}
 
-		setupChecksum(packet, packetCount);
+		setupChecksum(packet);
 		gremlin(packet);
+		sequenceNum = (sequenceNum == '0') ? '1' : '0';
 
 		// if packet not lost
 		if (packet[1] == 'A')
 		{
 			// show packet info
 			std::string packetString = "";
-			for (int i = 0; i < 128; i++)
+			for (int i = 0; i < 48; i++)
 			{
 				packetString += packet[i];
 			}
 
-			cout << "Packet #" << std::to_string(packetCount) << " to be sent: " << packetString << endl;
+			cout << "Packet #" << sequenceNum << " to be sent: " << packetString << endl;
 			sendPacket(packet);
-			receivePacket(packet);
-			errorChecking(packet);
-			packetCount++;
-			sequenceNum = (sequenceNum == '0') ? '1' : '0';
 		}
 	}
 
@@ -248,11 +227,23 @@ bool readFile(std::string fileName)
 	return true;
 }
 
+bool sendRequest()
+{
+	char request[] = "PUT TestFile";
+	sendto(sockfd, (const char *)request, strlen(request),
+		   0, (const struct sockaddr *)&servaddr,
+		   sizeof(servaddr));
+	cout << "Sending: " << request << endl;
+	cout << endl;
+
+	return true;
+}
+
 int main(int argc, char const *argv[])
 {
 	srand(time(0));
-	sockfd = connect(IPADDR);
-	if (sockfd < 0)
+	sockfd = connect();
+	if (sockfd != 0)
 	{
 		return -1;
 	}
@@ -261,8 +252,14 @@ int main(int argc, char const *argv[])
 	{
 		return -1;
 	}
-	getGremlinProbabilities();
-	createPackets();
 
+	getGremlinProbabilities();
+
+	if (!sendRequest())
+	{
+		return -1;
+	}
+
+	createPackets();
 	return 0;
 }
