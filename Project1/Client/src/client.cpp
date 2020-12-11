@@ -34,15 +34,10 @@ int connect()
 {
 	memset(&servaddr, 0, sizeof(servaddr));
 
-	std::string ipaddr;
-	cout << "Enter the server's public IP Address: ";
-	std::cin >> ipaddr;
-
 	// Filling server information
 	servaddr.sin_family = AF_INET;
 	servaddr.sin_port = htons(PORT);
 	servaddr.sin_addr.s_addr = INADDR_ANY;
-	// servaddr.sin_addr.s_addr = inet_addr(ipaddr.c_str());
 
 	return 0;
 }
